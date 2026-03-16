@@ -1,0 +1,175 @@
+-- ============================================================
+--  STUDENTS & COURSES  |  INNER JOIN & CROSS JOIN Examples
+--  No GROUP BY or ORDER BY — pure join queries only
+-- ============================================================
+
+USE sys;
+
+-- ============================================================
+--  SETUP  |  Create & populate both tables
+-- ============================================================
+
+CREATE TABLE courses (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    course_name VARCHAR(100) NOT NULL,
+    subject     ENUM('math', 'science', 'history', 'english', 'computer'),
+    credits     INT,
+    teacher     VARCHAR(100)
+);
+
+CREATE TABLE students (
+    id            INT AUTO_INCREMENT PRIMARY KEY,
+    name          VARCHAR(100) NOT NULL,
+    email         VARCHAR(100) UNIQUE NOT NULL,
+    gender        ENUM('male', 'female', 'other'),
+    course_id     INT,
+    date_of_birth DATE,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO courses (course_name, subject, credits, teacher) VALUES
+('Algebra Basics',      'math',     4, 'Mr. Sharma'),
+('Biology 101',         'science',  3, 'Ms. Verma'),
+('World History',       'history',  3, 'Mr. Khan'),
+('English Literature',  'english',  2, 'Ms. Patel'),
+('Python Programming',  'computer', 4, 'Mr. Mehta'),
+('Advanced Chemistry',  'science',  4, 'Ms. Rao'),
+('Quantum Physics',     'science',  5, 'Mr. Iyer');   -- no student enrolled
+
+INSERT INTO students (name, email, gender, course_id, date_of_birth) VALUES
+('Raj',    'raj@gmail.com',    'male',   1, '2002-05-10'),
+('Khushi', 'khushi@gmail.com', 'female', 2, '2003-03-12'),
+('Tanmay', 'tanmay@gmail.com', 'male',   5, '2001-07-21'),
+('Chetan', 'chetan@gmail.com', 'male',   3, '2004-01-05'),
+('Priya',  'priya@gmail.com',  'female', 1, '2002-11-25'),
+('Aman',   'aman@gmail.com',   'male',   4, '2001-08-19'),
+('Neha',   'neha@gmail.com',   'female', 5, '2003-09-15'),
+('Riya',   'riya@gmail.com',   'female', NULL, '2002-06-30');  -- not enrolled
+
+
+-- ============================================================
+--  INNER JOIN
+--  Returns ONLY students who are enrolled in a course.
+--  Riya (NULL course_id) and Quantum Physics (no students)
+--  are both excluded from all results below.
+-- ============================================================
+
+-- Basic: all enrolled students with their course details
+SELECT students.name, students.gender, courses.course_name, courses.subject, courses.teacher FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+-- Only student name, email and course name
+SELECT students.name, students.email, courses.course_name FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+-- With alias: rename columns in result
+SELECT students.name AS student_name, courses.course_name AS enrolled_in, courses.teacher AS taught_by FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+-- WHERE: only female students with their course
+SELECT students.name, students.gender, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.gender = 'female';
+
+-- WHERE: only male students with their course
+SELECT students.name, students.gender, courses.course_name, courses.teacher FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.gender = 'male';
+
+-- WHERE: students enrolled in computer subject
+SELECT students.name, students.email, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.subject = 'computer';
+
+-- WHERE: courses with 4 or more credits
+SELECT students.name, courses.course_name, courses.credits FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.credits >= 4;
+
+-- WHERE: students born after 2002
+SELECT students.name, students.date_of_birth, courses.course_name FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.date_of_birth > '2002-01-01';
+
+-- LIKE: students whose name starts with 'R'
+SELECT students.name, students.email, courses.course_name FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.name LIKE 'R%';
+
+-- LIKE: courses taught by a teacher with 'Mr.' prefix
+SELECT students.name, courses.course_name, courses.teacher FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.teacher LIKE 'Mr.%';
+
+-- IN: students enrolled in math or science
+SELECT students.name, students.gender, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.subject IN ('math', 'science');
+
+-- NOT IN: exclude math and science
+SELECT students.name, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.subject NOT IN ('math', 'science');
+
+-- BETWEEN: students born between 2001 and 2003
+SELECT students.name, students.date_of_birth, courses.course_name FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.date_of_birth BETWEEN '2001-01-01' AND '2003-12-31';
+
+-- AND: female students in science subject
+SELECT students.name, students.gender, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.gender = 'female' AND courses.subject = 'science';
+
+-- OR: students in math or english course
+SELECT students.name, courses.course_name, courses.subject FROM students INNER JOIN courses ON students.course_id = courses.id WHERE courses.subject = 'math' OR courses.subject = 'english';
+
+-- LIMIT: first 4 enrolled students
+SELECT students.name, courses.course_name, courses.teacher FROM students INNER JOIN courses ON students.course_id = courses.id LIMIT 4;
+
+-- IS NOT NULL: students who have a course assigned
+SELECT students.name, students.email, courses.course_name FROM students INNER JOIN courses ON students.course_id = courses.id WHERE students.course_id IS NOT NULL;
+
+-- CASE: label credits as Heavy or Light workload
+SELECT students.name, courses.course_name, courses.credits, CASE WHEN courses.credits >= 4 THEN 'Heavy Load' ELSE 'Light Load' END AS workload FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+-- CONCAT: combine student name and course into one column
+SELECT CONCAT(students.name, ' studies ', courses.course_name) AS summary FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+-- COUNT: total enrolled students (only matched rows)
+SELECT COUNT(*) AS total_enrolled FROM students INNER JOIN courses ON students.course_id = courses.id;
+
+
+-- ============================================================
+--  CROSS JOIN
+--  Pairs EVERY student with EVERY course.
+--  8 students x 7 courses = 56 total combinations.
+--  No ON condition — enrollment does not matter here.
+-- ============================================================
+
+-- Basic: every student paired with every course
+SELECT students.name, courses.course_name FROM students CROSS JOIN courses;
+
+-- Total combinations produced
+SELECT COUNT(*) AS total_combinations FROM students CROSS JOIN courses;
+
+-- Filter: only female students crossed with all courses
+SELECT students.name, students.gender, courses.course_name, courses.subject FROM students CROSS JOIN courses WHERE students.gender = 'female';
+
+-- Filter: only male students crossed with all courses
+SELECT students.name, students.gender, courses.course_name, courses.teacher FROM students CROSS JOIN courses WHERE students.gender = 'male';
+
+-- Filter: all students crossed with computer subject only
+SELECT students.name, students.email, courses.course_name, courses.subject FROM students CROSS JOIN courses WHERE courses.subject = 'computer';
+
+-- Filter: all students crossed with high credit courses
+SELECT students.name, courses.course_name, courses.credits FROM students CROSS JOIN courses WHERE courses.credits >= 4;
+
+-- Filter: students born after 2002 crossed with all courses
+SELECT students.name, students.date_of_birth, courses.course_name FROM students CROSS JOIN courses WHERE students.date_of_birth > '2002-01-01';
+
+-- LIKE: students starting with 'A' crossed with all courses
+SELECT students.name, courses.course_name, courses.teacher FROM students CROSS JOIN courses WHERE students.name LIKE 'A%';
+
+-- IN: all students crossed with science or math only
+SELECT students.name, courses.course_name, courses.subject FROM students CROSS JOIN courses WHERE courses.subject IN ('science', 'math');
+
+-- AND: female students crossed with science courses only
+SELECT students.name, students.gender, courses.course_name, courses.subject FROM students CROSS JOIN courses WHERE students.gender = 'female' AND courses.subject = 'science';
+
+-- OR: all students crossed with history or english courses
+SELECT students.name, courses.course_name, courses.subject FROM students CROSS JOIN courses WHERE courses.subject = 'history' OR courses.subject = 'english';
+
+-- BETWEEN: students born between 2002 and 2004 crossed with all courses
+SELECT students.name, students.date_of_birth, courses.course_name FROM students CROSS JOIN courses WHERE students.date_of_birth BETWEEN '2002-01-01' AND '2004-12-31';
+
+-- LIMIT: first 10 combinations only
+SELECT students.name, courses.course_name FROM students CROSS JOIN courses LIMIT 10;
+
+-- IS NULL: unenrolled student (Riya) crossed with all courses
+SELECT students.name, students.email, courses.course_name FROM students CROSS JOIN courses WHERE students.course_id IS NULL;
+
+-- CASE: label each pairing by credit workload
+SELECT students.name, courses.course_name, courses.credits, CASE WHEN courses.credits >= 4 THEN 'Heavy Load' ELSE 'Light Load' END AS workload FROM students CROSS JOIN courses;
+
+-- CONCAT: hypothetical pairings as a sentence
+SELECT CONCAT(students.name, ' could study ', courses.course_name) AS hypothetical FROM students CROSS JOIN courses LIMIT 10;
+
+-- ============================================================
+--  END OF SCRIPT
+-- ============================================================
